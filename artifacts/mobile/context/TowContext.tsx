@@ -29,6 +29,7 @@ interface TowContextType {
   socket: Socket | null;
   pendingPayment: { requestId: string; amount: number } | null;
   clearPendingPayment: () => void;
+  driverLocation: { latitude: number; longitude: number } | null;
 }
 
 const TowContext = createContext<TowContextType | null>(null);
@@ -39,12 +40,16 @@ export function TowProvider({ userId, children }: { userId: string | null; child
   const [activeRequest, setActiveRequest] = useState<TowRequest | null>(null);
   const [towStatus, setTowStatus] = useState<TowStatus>("idle");
   const [pendingPayment, setPendingPayment] = useState<{ requestId: string; amount: number } | null>(null);
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     if (!userId) return;
 
-    const socket = io(`https://${API_DOMAIN}`, { path: "/api/socket.io", transports: ["websocket", "polling"] });
+    const socket = io(`https://${API_DOMAIN}`, {
+      path: "/api/socket.io",
+      transports: ["websocket", "polling"],
+    });
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -56,9 +61,16 @@ export function TowProvider({ userId, children }: { userId: string | null; child
       setTowStatus("accepted");
     });
 
+    socket.on("driver:location:update", ({ driverId, location }: { driverId: string; location: { latitude: number; longitude: number } }) => {
+      if (activeRequest?.driverId === driverId || towStatus === "accepted" || towStatus === "in_progress") {
+        setDriverLocation(location);
+      }
+    });
+
     socket.on("request:completed", ({ requestId, amount }: { requestId: string; amount: number }) => {
       setTowStatus("completed");
       setPendingPayment({ requestId, amount });
+      setDriverLocation(null);
     });
 
     return () => {
@@ -71,6 +83,7 @@ export function TowProvider({ userId, children }: { userId: string | null; child
     setPendingPayment(null);
     setTowStatus("idle");
     setActiveRequest(null);
+    setDriverLocation(null);
   };
 
   return (
@@ -83,6 +96,7 @@ export function TowProvider({ userId, children }: { userId: string | null; child
         socket: socketRef.current,
         pendingPayment,
         clearPendingPayment,
+        driverLocation,
       }}
     >
       {children}
