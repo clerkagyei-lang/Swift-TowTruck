@@ -79,6 +79,17 @@ export default function DriverDashboard() {
         colors={colors}
       />
 
+      {/* Offline overlay — rendered before top bar so top bar stays tappable */}
+      {!isOnline && (
+        <View style={styles.offlineOverlay}>
+          <View style={styles.offlineCard}>
+            <MaterialCommunityIcons name="truck-fast" size={48} color={colors.mutedForeground} />
+            <Text style={styles.offlineTitle}>You're Offline</Text>
+            <Text style={styles.offlineText}>Toggle online above to start receiving tow requests.</Text>
+          </View>
+        </View>
+      )}
+
       {/* Status bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 10) }]}>
         <View style={styles.statusCard}>
@@ -103,17 +114,6 @@ export default function DriverDashboard() {
         <MaterialCommunityIcons name="cash" size={14} color={colors.success} />
         <Text style={styles.earningsText}>GHS {earningsToday.toFixed(0)} today</Text>
       </View>
-
-      {/* Offline overlay */}
-      {!isOnline && (
-        <View style={styles.offlineOverlay}>
-          <View style={styles.offlineCard}>
-            <MaterialCommunityIcons name="truck-fast" size={48} color={colors.mutedForeground} />
-            <Text style={styles.offlineTitle}>You're Offline</Text>
-            <Text style={styles.offlineText}>Toggle online above to start receiving tow requests.</Text>
-          </View>
-        </View>
-      )}
 
       {/* Active trip indicator */}
       {tripStatus !== "idle" && (
