@@ -15,6 +15,7 @@ export interface Driver {
   id: string;
   name: string;
   email: string;
+  password: string;
   phone: string;
   isOnline: boolean;
   currentLocation: { latitude: number; longitude: number } | null;
@@ -22,6 +23,10 @@ export interface Driver {
   rating: number;
   totalTrips: number;
   activeJobId: string | null;
+  vehicleType: string;
+  vehiclePlate: string;
+  earningsToday: number;
+  earningsTotal: number;
 }
 
 export interface TowRequest {
@@ -72,6 +77,7 @@ function seedData() {
     id: driver1Id,
     name: "Kwame Asante",
     email: "kwame@swifttow.com",
+    password: "driver123",
     phone: "+233244567890",
     isOnline: true,
     currentLocation: { latitude: 5.614818, longitude: -0.205874 },
@@ -79,6 +85,10 @@ function seedData() {
     rating: 4.8,
     totalTrips: 142,
     activeJobId: null,
+    vehicleType: "Flatbed Tow Truck",
+    vehiclePlate: "GR 4421-22",
+    earningsToday: 250,
+    earningsTotal: 4200,
   });
 
   const driver2Id = randomUUID();
@@ -86,6 +96,7 @@ function seedData() {
     id: driver2Id,
     name: "Kofi Mensah",
     email: "kofi@swifttow.com",
+    password: "driver123",
     phone: "+233245678901",
     isOnline: true,
     currentLocation: { latitude: 5.603717, longitude: -0.186964 },
@@ -93,6 +104,10 @@ function seedData() {
     rating: 4.6,
     totalTrips: 89,
     activeJobId: null,
+    vehicleType: "Hook & Chain Truck",
+    vehiclePlate: "GW 2234-20",
+    earningsToday: 150,
+    earningsTotal: 2800,
   });
 
   const driver3Id = randomUUID();
@@ -100,6 +115,7 @@ function seedData() {
     id: driver3Id,
     name: "Ama Owusu",
     email: "ama@swifttow.com",
+    password: "driver123",
     phone: "+233246789012",
     isOnline: false,
     currentLocation: null,
@@ -107,6 +123,10 @@ function seedData() {
     rating: 4.9,
     totalTrips: 210,
     activeJobId: null,
+    vehicleType: "Flatbed Tow Truck",
+    vehiclePlate: "AW 5567-21",
+    earningsToday: 0,
+    earningsTotal: 6100,
   });
 
   const userId = randomUUID();

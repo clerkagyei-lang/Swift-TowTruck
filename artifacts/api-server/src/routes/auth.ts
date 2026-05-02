@@ -31,14 +31,39 @@ router.post("/auth/login", (req, res) => {
     return;
   }
 
+  // Check regular users first
   const user = store.getUserByEmail(email);
-  if (!user || user.password !== password) {
-    res.status(401).json({ error: "invalid_credentials", message: "Invalid email or password" });
+  if (user && user.password === password) {
+    const { password: _, ...safeUser } = user;
+    res.json({ token: user.id, user: safeUser });
     return;
   }
 
-  const { password: _, ...safeUser } = user;
-  res.json({ token: user.id, user: safeUser });
+  // Check drivers
+  const driver = Array.from(store.drivers.values()).find((d) => d.email === email);
+  if (driver && driver.password === password) {
+    res.json({
+      token: driver.id,
+      user: {
+        id: driver.id,
+        name: driver.name,
+        email: driver.email,
+        phone: driver.phone,
+        role: "driver" as const,
+        avatarUrl: driver.avatarUrl,
+        createdAt: new Date().toISOString(),
+        // driver extras
+        rating: driver.rating,
+        totalTrips: driver.totalTrips,
+        vehicleType: driver.vehicleType,
+        vehiclePlate: driver.vehiclePlate,
+        isOnline: driver.isOnline,
+      },
+    });
+    return;
+  }
+
+  res.status(401).json({ error: "invalid_credentials", message: "Invalid email or password" });
 });
 
 router.get("/auth/profile", (req, res) => {
@@ -49,13 +74,21 @@ router.get("/auth/profile", (req, res) => {
   }
 
   const user = store.getUserById(userId);
-  if (!user) {
-    res.status(404).json({ error: "not_found", message: "User not found" });
+  if (user) {
+    const { password: _, ...safeUser } = user;
+    res.json(safeUser);
     return;
   }
 
-  const { password: _, ...safeUser } = user;
-  res.json(safeUser);
+  // Check drivers
+  const driver = store.drivers.get(userId);
+  if (driver) {
+    const { password: _, ...safeDriver } = driver;
+    res.json({ ...safeDriver, role: "driver" });
+    return;
+  }
+
+  res.status(404).json({ error: "not_found", message: "User not found" });
 });
 
 router.put("/auth/profile", (req, res) => {
@@ -67,13 +100,13 @@ router.put("/auth/profile", (req, res) => {
   }
 
   const user = store.updateUser(userId, { name, phone, avatarUrl });
-  if (!user) {
-    res.status(404).json({ error: "not_found", message: "User not found" });
+  if (user) {
+    const { password: _, ...safeUser } = user;
+    res.json(safeUser);
     return;
   }
 
-  const { password: _, ...safeUser } = user;
-  res.json(safeUser);
+  res.status(404).json({ error: "not_found", message: "User not found" });
 });
 
 export default router;
