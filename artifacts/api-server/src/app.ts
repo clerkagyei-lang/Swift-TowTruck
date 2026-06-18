@@ -31,6 +31,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Root route to confirm server health and clear the Vercel 404
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Swift Tow API Server is active and running live!",
+    timestamp: new Date()
+  });
+});
+
 app.use("/api", router);
 
 export default app;
