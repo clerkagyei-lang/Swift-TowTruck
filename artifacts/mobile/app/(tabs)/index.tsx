@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { useAuth } from "@/context/AuthContext";
 import { useTow } from "@/context/TowContext";
 import { useColors } from "@/hooks/useColors";
@@ -28,6 +29,9 @@ const TOW_TYPES: { id: TowType; label: string; icon: string; desc: string; price
 
 const ACCRA = { latitude: 5.6037, longitude: -0.187 };
 const TAB_BAR_HEIGHT = 80;
+
+// PLACE YOUR GOOGLE MAPS API KEY HERE
+const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY_HERE";
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -82,7 +86,8 @@ export default function HomeScreen() {
       sub = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.Balanced, timeInterval: 4000, distanceInterval: 8 },
         (pos) => {
-          setLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+          // Only automatically snap position if the user isn't trying to map lookups
+          setLocation((prev) => prev ? prev : { latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         }
       );
     })();
@@ -147,23 +152,61 @@ export default function HomeScreen() {
         followUser={!driverLocation}
       />
 
-      {/* Top bar */}
+      {/* Top bar with Google Address Search Autocomplete Built-in */}
       <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 10) }]}>
         <View style={styles.greetingRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>Hi, {user?.name?.split(" ")[0]}</Text>
-            <View style={styles.locationRow}>
-              <Ionicons name="location-sharp" size={13} color={colors.primary} />
-              <Text style={styles.locationText} numberOfLines={1}>{address}</Text>
+          <View style={{ flex: 1, width: '100%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={styles.greeting}>Hi, {user?.name?.split(" ")[0]}</Text>
+              <Pressable onPress={() => router.push("/help")} style={styles.helpBtn}>
+                <Ionicons name="headset" size={18} color={colors.secondary} />
+              </Pressable>
+            </View>
+
+            {/* Google Places Input Interface */}
+            <View style={styles.searchWrapper}>
+              <Ionicons name="search" size={18} color={colors.primary} style={styles.searchIcon} />
+              <GooglePlacesAutocomplete
+                placeholder={address}
+                fetchDetails={true}
+                onPress={(data, details = null) => {
+                  if (details?.geometry?.location) {
+                    const selectedCoords = {
+                      latitude: details.geometry.location.lat,
+                      longitude: details.geometry.location.lng,
+                    };
+                    setLocation(selectedCoords);
+                    setAddress(data.description);
+
+                    // Animate the map frame automatically to show the searched location point
+                    mapRef.current?.animateToRegion({
+                      ...selectedCoords,
+                      latitudeDelta: 0.015,
+                      longitudeDelta: 0.015,
+                    }, 1000);
+                  }
+                }}
+                query={{
+                  key: GOOGLE_MAPS_API_KEY,
+                  language: 'en',
+                  components: 'country:gh', // Focus search results within Ghana limits
+                }}
+                styles={{
+                  textInputContainer: styles.autocompleteInputContainer,
+                  textInput: styles.autocompleteTextInput,
+                  listView: styles.autocompleteListView,
+                  row: styles.autocompleteRow,
+                  description: styles.autocompleteDescription,
+                }}
+                enablePoweredByContainer={false}
+                keyboardShouldPersistTaps="handled"
+              />
             </View>
           </View>
-          <Pressable onPress={() => router.push("/help")} style={styles.helpBtn}>
-            <Ionicons name="headset" size={20} color={colors.secondary} />
-          </Pressable>
         </View>
       </View>
 
-      {/* Bottom panel — scrollable so confirm button is always reachable */}
+      {/* Bottom panel */}
       <View style={styles.bottomPanel}>
         <ScrollView
           scrollEnabled={false}
@@ -208,114 +251,4 @@ export default function HomeScreen() {
                 <Text style={styles.confirmBtnText}>Finding Driver...</Text>
               </View>
             ) : (
-              <View style={styles.confirmBtnContent}>
-                <Ionicons name="navigate" size={18} color="#fff" />
-                <Text style={styles.confirmBtnText}>Request Tow</Text>
-              </View>
-            )}
-          </Pressable>
-
-          {isSearching && (
-            <Pressable onPress={cancelSearch} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>Cancel Request</Text>
-            </Pressable>
-          )}
-        </ScrollView>
-      </View>
-    </View>
-  );
-}
-
-function makeStyles(colors: ReturnType<typeof useColors>, bottomPad: number) {
-  return StyleSheet.create({
-    container: { flex: 1 },
-    topBar: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      paddingHorizontal: 16,
-      paddingBottom: 12,
-    },
-    greetingRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: "rgba(255,255,255,0.97)",
-      borderRadius: 16,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.12,
-      shadowRadius: 10,
-      elevation: 5,
-    },
-    greeting: { fontSize: 15, fontWeight: "700" as const, color: colors.text },
-    locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
-    locationText: { fontSize: 12, color: colors.mutedForeground, flex: 1 },
-    helpBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.muted,
-      alignItems: "center",
-      justifyContent: "center",
-      marginLeft: 10,
-    },
-    bottomPanel: {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: colors.card,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 12,
-    },
-    panelContent: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: bottomPad,
-    },
-    handleBar: {
-      width: 36,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: colors.border,
-      alignSelf: "center",
-      marginBottom: 14,
-    },
-    panelTitle: { fontSize: 15, fontWeight: "700" as const, color: colors.text, marginBottom: 12 },
-    towTypes: { flexDirection: "row", gap: 10, marginBottom: 14 },
-    towCard: {
-      flex: 1,
-      backgroundColor: colors.muted,
-      borderRadius: 14,
-      padding: 12,
-      alignItems: "center",
-      gap: 4,
-      borderWidth: 2,
-      borderColor: "transparent",
-    },
-    towCardActive: { borderColor: colors.primary, backgroundColor: colors.accent },
-    towLabel: { fontSize: 11, fontWeight: "600" as const, color: colors.mutedForeground, textAlign: "center" },
-    towLabelActive: { color: colors.primary },
-    towPrice: { fontSize: 10, color: colors.mutedForeground, textAlign: "center" },
-    confirmBtn: {
-      backgroundColor: colors.primary,
-      borderRadius: 14,
-      height: 54,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    confirmBtnDisabled: { backgroundColor: colors.mutedForeground },
-    confirmBtnContent: { flexDirection: "row", alignItems: "center", gap: 8 },
-    confirmBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" as const },
-    cancelBtn: { alignItems: "center", paddingVertical: 12 },
-    cancelText: { color: colors.destructive, fontWeight: "600" as const, fontSize: 14 },
-  });
-}
+              <View style
